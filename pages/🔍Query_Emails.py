@@ -21,6 +21,7 @@ from langchain.prompts import StringPromptTemplate, BaseChatPromptTemplate
 from langchain.prompts.prompt import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
+
 from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, DateTime, Float, Boolean
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -263,6 +264,10 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 llm = ChatOpenAI(streaming=True, callback_manager=CallbackManager([StreamingStdOutCallbackHandler()]), temperature=0)
 agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
 
+# Custom Streamlit callback handler
+class StreamlitCallbackHandler(StreamingStdOutCallbackHandler):
+    def on_llm_new_token(self, token):
+        st.write(token, end="")
 
 # User input
 
@@ -273,5 +278,4 @@ user_input = st.text_input("Please ask a question or make a request(or 'q' to qu
 
 if user_input and user_input.lower() != 'q':
     response = agent_chain.run(user_input)
-    st.write(response)
 
