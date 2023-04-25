@@ -169,10 +169,6 @@ def sql_index_tool(query: str) -> str:
 
 
 
-# LLMPredictor (gpt-4)
-llm_predictor_gpt4 = LLMPredictor(llm=ChatOpenAI(temperature=0, model_name="gpt-4"))
-service_context_gpt4 = ServiceContext.from_defaults(llm_predictor=llm_predictor_gpt4)
-
 
 
 
