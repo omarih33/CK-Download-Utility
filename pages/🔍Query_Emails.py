@@ -1,49 +1,28 @@
 import os
 import logging
 import sys
-from bs4 import BeautifulSoup
-import pandas as pd
-
-from langchain.agents import AgentType, tool
-from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from pydantic import BaseModel, Field
-from langchain.agents import load_tools
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
-from langchain.prompts.prompt import PromptTemplate
-from langchain.document_loaders import DataFrameLoader
-from langchain import SQLDatabase, SQLDatabaseChain
-from langchain.agents import initialize_agent
-from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
-from langchain.prompts import StringPromptTemplate
-from langchain import OpenAI, SerpAPIWrapper, LLMChain
-from typing import List, Union
-from langchain.schema import AgentAction, AgentFinish
-from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
-from langchain.prompts import BaseChatPromptTemplate
-from langchain import SerpAPIWrapper, LLMChain
-from langchain.chat_models import ChatOpenAI
-from typing import List, Union
-from langchain.schema import AgentAction, AgentFinish, HumanMessage
 import re
 import streamlit as st
 from datetime import datetime
-
-
-
+from bs4 import BeautifulSoup
+import pandas as pd
+from pydantic import BaseModel, Field
+from typing import List, Union
+from langchain import SQLDatabase, SQLDatabaseChain, SerpAPIWrapper, LLMChain, OpenAI
+from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.document_loaders import DataFrameLoader
+from langchain.agents import AgentType, tool, load_tools, initialize_agent, Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
+from langchain.prompts import StringPromptTemplate, BaseChatPromptTemplate
+from langchain.prompts.prompt import PromptTemplate
+from langchain.chat_models import ChatOpenAI
+from langchain.schema import AgentAction, AgentFinish, HumanMessage
+from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, DateTime, Float, Boolean
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
-
-
-import pandas as pd
-from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, DateTime, Float, Boolean
-from llama_index import GPTSQLStructStoreIndex, SQLDatabase, SimpleDirectoryReader, Document
-from llama_index.indices.struct_store import SQLContextContainerBuilder
-from datetime import datetime
-
-
 
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
