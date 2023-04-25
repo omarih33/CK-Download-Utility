@@ -1,7 +1,6 @@
 import os
 import logging
 import sys
-import langchain
 from bs4 import BeautifulSoup
 import pandas as pd
 from gpt_index import GPTSimpleVectorIndex, SimpleDirectoryReader, LLMPredictor, ServiceContext
