@@ -178,16 +178,10 @@ def sql_index_tool(query: str) -> str:
 
 # Function to remove HTML tags and keep link URLs intact
 def remove_html_tags(html_content):
+    if isinstance(html_content, float):
+        return ""
     soup = BeautifulSoup(html_content, "html.parser")
-    
-    # Find all 'a' tags and replace them with their URLs
-    for a_tag in soup.find_all('a'):
-        a_tag.replace_with(a_tag.get('href'))
-    
-    # Get the text content without HTML tags
-    text_content = soup.get_text()
-    
-    return text_content
+    return soup.get_text().strip()
 
 
 @tool("Email Retrieval and Display")
