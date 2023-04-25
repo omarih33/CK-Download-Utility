@@ -1,42 +1,18 @@
 import streamlit as st
 import requests
 import time as tm 
-import chromadb
 import shutil
 from typing import List 
 import os
-from gpt_index.indices.struct_store import GPTPandasIndex
-import pandas as pd
-from gpt_index import SimpleDirectoryReader
 
-from gpt_index.indices import GPTTreeIndex, GPTListIndex  # Add this import
-from gpt_index.indices.composability import ComposableGraph
-from gpt_index import download_loader
 import pandas as pd
 from datetime import datetime
 from datetime import time
-from langchain.agents import create_pandas_dataframe_agent
-from langchain.llms import OpenAI
-from pathlib import Path
-from llama_index import download_loader
 
-from gpt_index import (
-    GPTSimpleVectorIndex,
-    LLMPredictor,
-    ServiceContext,
-)
-from langchain.chat_models import ChatOpenAI
-from langchain.llms import OpenAI
-from gpt_index.indices.query.query_transform.base import StepDecomposeQueryTransform
+from pathlib import Path
+
 from io import StringIO
 
-from langchain.llms import OpenAI
-from langchain.docstore.document import Document
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
 
 
 
