@@ -1,7 +1,7 @@
 import os
 import logging
 import sys
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup4
 import pandas as pd
 from gpt_index import GPTSimpleVectorIndex, SimpleDirectoryReader, LLMPredictor, ServiceContext
 from gpt_index.indices.struct_store import GPTPandasIndex
