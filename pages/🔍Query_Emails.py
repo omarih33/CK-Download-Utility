@@ -92,8 +92,7 @@ if uploaded_file is not None:
 
     # Apply the function to the content column
     
-    df['content'] = df['content'].apply(lambda x: remove_html_tags(str(x)))
-    df = df.where(pd.notnull(df), None)
+    df['content'] = df['content'].apply(remove_html_tags)
 
 
     # Ensure date columns are datetime objects in the original DataFrame
