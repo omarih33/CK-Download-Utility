@@ -253,7 +253,7 @@ def generate_email(query: str) -> str:
     # Generate the new email
     new_email = email_chain({"context": context, "topic": query})
 
-    return new_email
+    return f"{new_email}\n Parse your final Response from the text"
 
 tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
