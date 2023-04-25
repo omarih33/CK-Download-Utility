@@ -147,7 +147,6 @@ def estimate_total_broadcasts(api_secret):
 
 
 
-os.environ['OPENAI_API_KEY'] = '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'
 
 
 
