@@ -45,6 +45,10 @@ from llama_index import GPTSQLStructStoreIndex, SQLDatabase, SimpleDirectoryRead
 from llama_index.indices.struct_store import SQLContextContainerBuilder
 from datetime import datetime
 
+
+
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
 # App title
 st.title("Query Your ConvertKit Emails")
 
