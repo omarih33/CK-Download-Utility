@@ -16,8 +16,6 @@ from io import StringIO
 
 
 
-# Prepare the data
-from bs4 import BeautifulSoup
 
 
 
@@ -87,9 +85,7 @@ def download_broadcasts(api_secret, date_range, published_filter, public_filter)
                             broadcast_stats = get_broadcast_stats(api_secret, broadcast["id"])
                             broadcast_details.update(broadcast_stats)
                             broadcast.update(broadcast_details)
-                            # Parse the HTML in the 'content' column using BeautifulSoup and extract only the text
-                            soup = BeautifulSoup(broadcast['content'], 'html.parser')
-                            broadcast['content'] = soup.get_text()
+                            
                             all_broadcasts.append(broadcast)
             processed_broadcasts += 1
             # Update the progress bar
