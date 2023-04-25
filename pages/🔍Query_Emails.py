@@ -3,8 +3,7 @@ import logging
 import sys
 from bs4 import BeautifulSoup
 import pandas as pd
-from gpt_index import GPTSimpleVectorIndex, SimpleDirectoryReader, LLMPredictor, ServiceContext
-from gpt_index.indices.struct_store import GPTPandasIndex
+
 from langchain.agents import AgentType, tool
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
