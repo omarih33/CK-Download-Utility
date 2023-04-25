@@ -141,7 +141,7 @@ sql_database = SQLDatabase(engine, include_tables=["emails"])
 
 
 _DEFAULT_TEMPLATE = """Given an input question, first create a syntactically correct query to run, then look at the results of the query and return the answer.
-Use the following format:
+Do NOT look for exact-match email_names, containing. Use the following format:
 
 Question: "Question here"
 SQLQuery: SQL Query to run
@@ -149,15 +149,6 @@ SQLResult: "Result of the SQLQuery"
 Answer: "Final answer here"
 
 Question: {input}
-
-Example:
-
-Question: How many recipients does an email with a name 'journey' have?"
-SQLQuery: SELECT recipients FROM emails WHERE email_name LIKE '%' || 'journey' || '%'
-SQLResult: "500"
-Answer: "There are 500 recipients for emails with a name 'journey'."
-
-
 """
 PROMPT = PromptTemplate(
     input_variables=["input"], template=_DEFAULT_TEMPLATE
