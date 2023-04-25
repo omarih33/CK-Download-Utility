@@ -141,7 +141,9 @@ sql_database = SQLDatabase(engine, include_tables=["emails"])
 
 
 _DEFAULT_TEMPLATE = """Given an input question, first create a syntactically correct query to run, then look at the results of the query and return the answer.
-Do NOT look for exact-match email_names, containing. Use the following format:
+Instead of using exact-match email_names, use the LIKE function. 
+
+Use the following format:
 
 Question: "Question here"
 SQLQuery: SQL Query to run
