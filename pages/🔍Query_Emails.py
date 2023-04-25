@@ -1,6 +1,7 @@
 import os
 import logging
 import sys
+import chromadb
 import langchain
 from bs4 import BeautifulSoup
 import pandas as pd
