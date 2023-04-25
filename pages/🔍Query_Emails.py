@@ -141,7 +141,7 @@ sql_database = SQLDatabase(engine, include_tables=["emails"])
 
 
 _DEFAULT_TEMPLATE = """Given an input question, first create a syntactically correct query to run, then look at the results of the query and return the answer.
-Instead of using exact-match email_names, use the LIKE function. Be case-insensitive.
+When using using exact-match email_names, be case-insensitive and use the LIKE function instead. 
 
 Use the following format:
 
