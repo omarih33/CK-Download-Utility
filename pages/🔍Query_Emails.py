@@ -34,7 +34,6 @@ from datetime import datetime
 
 
 
-os.environ['OPENAI_API_KEY'] = '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'
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
