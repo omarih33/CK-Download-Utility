@@ -272,6 +272,7 @@ user_input = st.text_input("Please ask a question or make a request(or 'q' to qu
 # Check if input is not empty and not 'q'
 
 if user_input and user_input.lower() != 'q':
-    response = agent_chain.run(user_input)
-    st.write(response)
+    with st.spinner('Processing your request...'):
+        response = agent_chain.run(user_input)
+        st.write(response)
 
