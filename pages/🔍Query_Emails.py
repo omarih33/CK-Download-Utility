@@ -91,7 +91,8 @@ if uploaded_file is not None:
     df = df.rename(columns={"email_address": "sent_from"})
 
     # Apply the function to the content column
-    df['content'] = df['content'].apply(remove_html_tags)
+    
+    df['content'] = df['content'].apply(lambda x: remove_html_tags(str(x)))
 
     # Ensure date columns are datetime objects in the original DataFrame
     date_columns = ["created_at", "published_at", "send_at"]
