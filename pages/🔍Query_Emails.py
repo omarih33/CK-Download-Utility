@@ -94,6 +94,8 @@ if uploaded_file is not None:
     
     df['content'] = df['content'].astype(str).apply(remove_html_tags)
     df = df.where(pd.notnull(df), None)
+    df = df.fillna(0)
+
 
 
 
