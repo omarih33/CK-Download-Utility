@@ -253,20 +253,20 @@ def generate_email(query: str) -> str:
     context = "\n\n".join([email.page_content for email in similar_emails])
 
     # Custom prompt for generating emails
-    email_prompt_template = """Using the following email context, {prompt}\n\n
+    email_prompt_template = """This is a laidback email newsletter about Squarespace resources. Using the following email context, {query}\n\n
     Email Context: {context}
     
     New email: """
 
     EMAIL_PROMPT = PromptTemplate(
-        template=email_prompt_template, input_variables=["context", "prompt"]
+        template=email_prompt_template, input_variables=["context", "query"]
     )
 
     # Create a new LLMChain with the custom email prompt
     email_chain = LLMChain(llm=llm, prompt=EMAIL_PROMPT)
 
     # Generate the new email
-    new_email = email_chain({"prompt": query, "context": context})
+    new_email = email_chain({"query": query, "context": context})
 
     return f"{new_email}"
 
