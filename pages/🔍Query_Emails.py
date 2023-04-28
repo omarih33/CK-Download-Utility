@@ -27,11 +27,6 @@ logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-
-
-
-
-
 # App title
 st.title("Query Your ConvertKit Emails")
 
@@ -116,9 +111,8 @@ if uploaded_file is not None:
     # Convert date columns to string format in the df_chroma DataFrame
     for col in date_columns:
         df_chroma[col] = df_chroma[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
-    
-    
-   
+
+    st.write(df_chroma)
 
     # Insert the data from the DataFrame into the SQL table
     with engine.connect() as connection:
@@ -155,14 +149,11 @@ sql_database = SQLDatabase(engine, include_tables=["emails"])
 
 _DEFAULT_TEMPLATE = """Given an input question, first create a syntactically correct query to run, then look at the results of the query and return the answer.
 When using using exact-match email_names, be case-insensitive and use the LIKE function instead. 
-
 Use the following format:
-
 Question: "Question here"
 SQLQuery: SQL Query to run
 SQLResult: "Result of the SQLQuery"
 Answer: "Final answer here"
-
 Question: {input}
 """
 PROMPT = PromptTemplate(
@@ -178,10 +169,10 @@ db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT, verb
 
 @tool("Email Analytics")
 def sql_index_tool(query: str) -> str:
-    """Use this for email analytics. This table is a list of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published_at, send_at, public, and thumbnail. Query structured data using SQL syntax."""
+    """Use this for email analytics. This table is a list of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published at, send at, public, and thumbnail. Query structured data using SQL syntax."""
     query = query.replace('"', '')
     sql_response = db_chain.run(query)
-    return f"Result of the SQL Query:\n{sql_response}\n"
+    return f"Result of the SQL Query:\n{sql_response}\nThis is the final response. You do not need to parse text."
 
 
 
@@ -189,6 +180,12 @@ def sql_index_tool(query: str) -> str:
 
 
 
+# Function to remove HTML tags and keep link URLs intact
+def remove_html_tags(html_content):
+    if isinstance(html_content, float):
+        return ""
+    soup = BeautifulSoup(html_content, "html.parser")
+    return soup.get_text().strip()
 
 
 @tool("Email Retrieval and Display")
@@ -262,19 +259,20 @@ def generate_email(query: str) -> str:
 tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
+
 llm = ChatOpenAI(verbose=True, temperature=0)
 agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
 
 
- # User input
+
+# User input
+
 
 user_input = st.text_input("Please ask a question or make a request(or 'q' to quit): ")
 
-    # Check if input is not empty and not 'q'
+# Check if input is not empty and not 'q'
+
 if user_input and user_input.lower() != 'q':
-   with st.spinner('Processing your request...'):
-       response = agent_chain.run(user_input)
-       st.write(response)
-
-st.write(df_chroma)
-
+    with st.spinner('Processing your request...'):
+        response = agent_chain.run(user_input)
+        st.write(response)
