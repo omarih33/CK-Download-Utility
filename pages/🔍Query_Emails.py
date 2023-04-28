@@ -27,6 +27,17 @@ logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
+
+
+tools = [generate_email, sql_index_tool, summarize_email, print_email]
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+
+llm = ChatOpenAI(verbose=True, temperature=0)
+agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
+
+
+
 # App title
 st.title("Query Your ConvertKit Emails")
 
@@ -265,13 +276,5 @@ def generate_email(query: str) -> str:
     new_email = email_chain({"context": context, "topic": query})
 
     return f"{new_email}\n Parse your final Response from the text"
-
-tools = [generate_email, sql_index_tool, summarize_email, print_email]
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
-
-llm = ChatOpenAI(verbose=True, temperature=0)
-agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
-
 
 
