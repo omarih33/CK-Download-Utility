@@ -274,11 +274,11 @@ def generate_email(query: str) -> str:
     return f"{email_text}"
 
 tools = [generate_email, sql_index_tool, summarize_email, print_email]
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, input_key='input', output_key="output")
 
 
 llm = ChatOpenAI(temperature=0)
-agent_chain = initialize_agent(tools, llm, agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, return_intermediate_steps=True, memory=memory)
+agent_chain = initialize_agent(tools, llm, agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
 
 
 
