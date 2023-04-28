@@ -272,7 +272,7 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 
 
 llm = ChatOpenAI(temperature=0)
-agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
+agent_chain = initialize_agent(tools, llm, agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
 
 
 
