@@ -175,7 +175,7 @@ PROMPT = PromptTemplate(
 
 
 llm1 = OpenAI(temperature=0)
-db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT, verbose=True)
+db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT)
 
 
 
@@ -272,7 +272,7 @@ tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
-llm = ChatOpenAI(verbose=True, temperature=0)
+llm = ChatOpenAI(temperature=0)
 agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
 
 
