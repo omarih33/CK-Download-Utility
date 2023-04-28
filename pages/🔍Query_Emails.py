@@ -266,15 +266,12 @@ def generate_email(query: str) -> str:
     email_chain = LLMChain(llm=llm, prompt=EMAIL_PROMPT)
 
     # Generate the new email
-    new_email = email_chain({"context": context, "topic": query})
-    
-    # Extract the text of the generated email
-    email_text = new_email.get("text", "")
+    new_email = email_chain({"topic": query, "context": context})
 
-    return f"{email_text}"
+    return f"{new_email}"
 
 tools = [generate_email, sql_index_tool, summarize_email, print_email]
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, input_key='input', output_key="output")
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
 llm = ChatOpenAI(temperature=0)
