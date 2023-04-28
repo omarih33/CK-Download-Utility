@@ -270,11 +270,10 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 user_input = st.text_input("Please ask a question or make a request(or 'q' to quit): ")
 
     # Check if input is not empty and not 'q'
+if user_input and user_input.lower() != 'q':
+   with st.spinner('Processing your request...'):
+       response = agent_chain.run(user_input)
+       st.write(response)
 
-    if user_input and user_input.lower() != 'q':
-        with st.spinner('Processing your request...'):
-            response = agent_chain.run(user_input)
-            st.write(response)
-
-    st.write(df_chroma)
+st.write(df_chroma)
 
