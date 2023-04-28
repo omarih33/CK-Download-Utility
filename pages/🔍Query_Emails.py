@@ -121,19 +121,7 @@ if uploaded_file is not None:
         df_chroma[col] = df_chroma[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
     
     
-    # User input
-
-
-    user_input = st.text_input("Please ask a question or make a request(or 'q' to quit): ")
-
-    # Check if input is not empty and not 'q'
-
-    if user_input and user_input.lower() != 'q':
-        with st.spinner('Processing your request...'):
-            response = agent_chain.run(user_input)
-            st.write(response)
-
-    st.write(df_chroma)
+   
 
     # Insert the data from the DataFrame into the SQL table
     with engine.connect() as connection:
@@ -277,4 +265,16 @@ def generate_email(query: str) -> str:
 tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
+ # User input
+
+user_input = st.text_input("Please ask a question or make a request(or 'q' to quit): ")
+
+    # Check if input is not empty and not 'q'
+
+    if user_input and user_input.lower() != 'q':
+        with st.spinner('Processing your request...'):
+            response = agent_chain.run(user_input)
+            st.write(response)
+
+    st.write(df_chroma)
 
