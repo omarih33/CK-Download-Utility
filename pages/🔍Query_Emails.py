@@ -21,8 +21,7 @@ from langchain.schema import AgentAction, AgentFinish, HumanMessage
 
 from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, DateTime, Float, Boolean
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+
 
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
