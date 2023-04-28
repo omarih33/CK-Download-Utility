@@ -183,7 +183,7 @@ db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT)
 
 @tool("Email Analytics")
 def sql_index_tool(query: str) -> str:
-    """Use this for email analytics. It will query a table of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published at, send at, public, thumbnail_url, and status (drafts/completed). Query structured data using SQL syntax."""
+    """Use this for email analytics. It will query a table of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published at, send at, public, thumbnail_url, and status (draft/completed). Query structured data using SQL syntax."""
     query = query.replace('"', '')
     sql_response = db_chain.run(query)
     return f"\nThe SQL Result is: {sql_response}\n"
