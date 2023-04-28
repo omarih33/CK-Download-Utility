@@ -260,7 +260,7 @@ tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
-llm = ChatOpenAI(verbose=True, temperature=1)
+llm = ChatOpenAI(verbose=True, temperature=0)
 agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
 
 
