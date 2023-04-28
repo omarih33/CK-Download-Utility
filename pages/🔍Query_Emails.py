@@ -159,11 +159,14 @@ Some examples:
 Question: "How many emails were sent in 2022?"
 SQLQuery: SELECT COUNT(*) FROM emails WHERE strftime('%Y', send_at) = '2022';
 
-Question: "What is the average open rate for emails sent by john@example.com?"
-SQLQuery: SELECT AVG(open_rate) FROM emails WHERE sent_from LIKE 'john@example.com';
-
 Question: "How many recipients received emails with a click rate higher than 20%?"
 SQLQuery: SELECT SUM(recipients) FROM emails WHERE click_rate > 20;
+
+Question: "What was the best performing email of 2023?"
+SQLQuery: SELECT email_name, open_rate, click_rate FROM emails WHERE strftime('%Y', published_at) = '2023' ORDER BY click_rate DESC LIMIT 1;
+
+Question: "What draft has the most potential based on the email name?"
+SQLQuery: SELECT email_name FROM emails WHERE status = 'draft';
 
 Question: {input}
 """
@@ -180,7 +183,7 @@ db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT)
 
 @tool("Email Analytics")
 def sql_index_tool(query: str) -> str:
-    """Use this for email analytics. This table is a list of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published at, send at, public, and thumbnail. Query structured data using SQL syntax."""
+    """Use this for email analytics. It will query a table of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published at, send at, public, thumbnail_url, and status (drafts/completed). Query structured data using SQL syntax."""
     query = query.replace('"', '')
     sql_response = db_chain.run(query)
     return f"\nThe SQL Result is: {sql_response}\n"
@@ -250,7 +253,7 @@ def generate_email(query: str) -> str:
     context = "\n\n".join([email.page_content for email in similar_emails])
 
     # Custom prompt for generating emails
-    email_prompt_template = """You are an email copywriter: {topic}\n\n
+    email_prompt_template = """This is the SQSPThemes Newsletter: {topic}\n\n
     Email Context: {context}
     
     New email: """
@@ -264,8 +267,11 @@ def generate_email(query: str) -> str:
 
     # Generate the new email
     new_email = email_chain({"context": context, "topic": query})
+    
+    # Extract the text of the generated email
+    email_text = new_email.get("text", "")
 
-    return f"{new_email}\n Parse your final Response from the text"
+    return f"{email_text}"
 
 tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
