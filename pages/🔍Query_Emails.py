@@ -9,7 +9,6 @@ import pandas as pd
 from pydantic import BaseModel, Field
 from typing import List, Union
 from langchain import SQLDatabase, SQLDatabaseChain, SerpAPIWrapper, LLMChain, OpenAI
-from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
@@ -185,7 +184,7 @@ def sql_index_tool(query: str) -> str:
     """Use this for email analytics. This table is a list of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published at, send at, public, and thumbnail. Query structured data using SQL syntax."""
     query = query.replace('"', '')
     sql_response = db_chain.run(query)
-    return f"AI:\n{sql_response}\n"
+    return f"The SQL Result is:\n{sql_response}\n"
 
 
 
@@ -273,7 +272,7 @@ tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
-llm = ChatOpenAI(verbose=True, temperature=0)
+llm = OpenAI(verbose=True, temperature=0)
 agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
 
 
