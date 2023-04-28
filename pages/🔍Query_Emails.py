@@ -196,12 +196,6 @@ def sql_index_tool(query: str) -> str:
 
 
 
-# Function to remove HTML tags and keep link URLs intact
-def remove_html_tags(html_content):
-    if isinstance(html_content, float):
-        return ""
-    soup = BeautifulSoup(html_content, "html.parser")
-    return soup.get_text().strip()
 
 
 @tool("Email Retrieval and Display")
