@@ -204,7 +204,7 @@ def remove_html_tags(html_content):
 
 @tool("Email Retrieval and Display")
 def print_email(query: str) -> str:
-    """The Email Retrieval and Display tool will search for similar emails and display their content. Use this tool when you need to show the user an email."""
+    """Use this tool when you need to show the user an email."""
     
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
@@ -212,7 +212,7 @@ def print_email(query: str) -> str:
     # Extract email content
     context = "\n\n".join([email.page_content for email in similar_emails])
 
-    return f"\nThe email you requested is: {context}. \nUse the content above as your final Response."
+    return f"\nThe email says: {context}.\n"
 
 
 @tool("Email Summarizer")
@@ -253,7 +253,7 @@ def generate_email(query: str) -> str:
     context = "\n\n".join([email.page_content for email in similar_emails])
 
     # Custom prompt for generating emails
-    email_prompt_template = """This is the SQSPThemes Newsletter: {topic}\n\n
+    email_prompt_template = """Using the following email context, {topic}\n\n
     Email Context: {context}
     
     New email: """
