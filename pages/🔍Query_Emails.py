@@ -184,7 +184,7 @@ def sql_index_tool(query: str) -> str:
     """Use this for email analytics. This table is a list of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published at, send at, public, and thumbnail. Query structured data using SQL syntax."""
     query = query.replace('"', '')
     sql_response = db_chain.run(query)
-    return f"The SQL Result is:\n{sql_response}\n"
+    return f"\nThe SQL Result is: {sql_response}\n"
 
 
 
