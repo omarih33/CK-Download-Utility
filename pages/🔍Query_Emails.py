@@ -148,12 +148,25 @@ sql_database = SQLDatabase(engine, include_tables=["emails"])
 
 
 _DEFAULT_TEMPLATE = """Given an input question, first create a syntactically correct query to run, then look at the results of the query and return the answer.
-When using using exact-match email_names, be case-insensitive and use the LIKE function instead. 
+When using exact-match email_names, be case-insensitive and use the LIKE function instead.
+
 Use the following format:
 Question: "Question here"
 SQLQuery: SQL Query to run
 SQLResult: "Result of the SQLQuery"
 Answer: "Final answer here"
+
+
+Some examples:
+Question: "How many emails were sent in 2022?"
+SQLQuery: SELECT COUNT(*) FROM emails WHERE strftime('%Y', send_at) = '2022';
+
+Question: "What is the average open rate for emails sent by john@example.com?"
+SQLQuery: SELECT AVG(open_rate) FROM emails WHERE sent_from LIKE 'john@example.com';
+
+Question: "How many recipients received emails with a click rate higher than 20%?"
+SQLQuery: SELECT SUM(recipients) FROM emails WHERE click_rate > 20;
+
 Question: {input}
 """
 PROMPT = PromptTemplate(
