@@ -380,7 +380,13 @@ MY_TEMPLATE_TOOL_RESPONSE = """TOOL RESPONSE:
 
 USER'S INPUT
 --------------------
-Your Final Answer is {observation}."""
+
+```json
+{{{{
+    "action": "Final Answer",
+    "action_input": "{observation}"
+}}}}
+```"""
 
 # Initialize your custom agent executor
 llm = ChatOpenAI(temperature=0)
