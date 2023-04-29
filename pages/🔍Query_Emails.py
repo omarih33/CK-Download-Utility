@@ -395,9 +395,9 @@ agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX,
 # User input
 
 st.markdown("Examples:")
-st.markdown("write a template based on the email about...")
-st.markdown("What email had the most engagement in January 2023?")
-st.markdown("Show me the content of the email with the subject...")
+st.markdown("What email had the most engagement in March 2023?")
+st.markdown("Rewrite the email about...")
+st.markdown("Show me the email where...")
 
 st.markdown("")
 
