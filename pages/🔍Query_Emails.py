@@ -141,7 +141,6 @@ if uploaded_file is not None:
     for col in date_columns:
         df_chroma[col] = df_chroma[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
 
-    st.write(df_chroma)
 
     # Insert the data from the DataFrame into the SQL table
     with engine.connect() as connection:
@@ -398,11 +397,16 @@ agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX,
 
 # User input
 
+st.markdown("Examples:")
+st.markdown("write a template based on the email about...")
+st.markdown("What email had the most engagement in January 2023?")
+st.markdown("Show me the content of the email with the subject...")
+
+st.markdown("")
 
 user_input = st.text_input("Please ask a question or make a request(or 'q' to quit): ")
 
-st.markdown("what email has the most words?")
-st.markdown("what email had the most engagement?")
+st.write(df_chroma)
 # Check if input is not empty and not 'q'
 
 if user_input and user_input.lower() != 'q':
