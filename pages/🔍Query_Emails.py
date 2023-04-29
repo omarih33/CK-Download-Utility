@@ -9,7 +9,6 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import pandas as pd
 from pydantic import BaseModel, Field
-
 from typing import List, Union
 
 
@@ -212,6 +211,7 @@ db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT)
 
 
 
+@tool("Email Analytics")
 def sql_index_tool(query: str) -> str:
     """Use this for email analytics. It will query a table of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published_at, send_at, public, thumbnail_url, and status (draft/completed). Query structured data using SQL syntax."""
     query = query.replace('"', '')
@@ -219,8 +219,17 @@ def sql_index_tool(query: str) -> str:
     return f"\nThe SQL Result is: {sql_response}\n"
 
 
+
+
+
+
+
+
+
+
+@tool("Email Retrieval and Display")
 def print_email(query: str) -> str:
-    """Use this tool when you need to find an email."""
+    """Use this tool when you need to show the user an email."""
     
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
@@ -228,11 +237,12 @@ def print_email(query: str) -> str:
     # Extract email content
     context = "\n\n".join([email.page_content for email in similar_emails])
 
-    return context
+    return f"\nEmail: {context}.\n"
 
 
+@tool("Email Summarizer")
 def summarize_email(query: str) -> str:
-    """DO NOT USE unless the query asks for a summary."""
+    """DO NOT USE Unless the query asks for a summary."""
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
 
@@ -258,8 +268,9 @@ def summarize_email(query: str) -> str:
     return f"Summarized email based on previous emails:\n{summarized_email}"
 
 
+@tool("Email writer")
 def generate_email(query: str) -> str:
-    """This tool writes emails based on previous emails."""
+    """This tool writes emails based on previous emails. Input is email subject."""
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
 
@@ -284,66 +295,98 @@ def generate_email(query: str) -> str:
 
     return f"{new_email}"
 
-
-class SqlIndexToolInput(BaseModel):
-    query: str = Field()
-
-class PrintEmailInput(BaseModel):
-    query: str = Field()
-
-class SummarizeEmailInput(BaseModel):
-    query: str = Field()
-
-class GenerateEmailInput(BaseModel):
-    query: str = Field()
-
-
-
-sql_index_tool = Tool(
-    name="Email Analytics",
-    func=sql_index_tool,
-    description="Use this for email analytics. It will query a table of emails...",
-    args_schema=SqlIndexToolInput
-)
-
-print_email_tool = Tool(
-    name="Email Retrieval and Display",
-    func=print_email,
-    description="Use this tool when you need to find an email.",
-    args_schema=PrintEmailInput
-)
-
-summarize_email_tool = Tool(
-    name="Email Summarizer",
-    func=summarize_email,
-    description="DO NOT USE unless the query asks for a summary.",
-    args_schema=SummarizeEmailInput
-)
-
-generate_email_tool = Tool(
-    name="Email writer",
-    func=generate_email,
-    description="This tool writes emails based on previous emails.",
-    args_schema=GenerateEmailInput
-)
-
-tools = [
-    sql_index_tool,
-    print_email_tool,
-    summarize_email_tool,
-    generate_email_tool,
-]
-
+tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
+
+
+def initialize_custom_agent_executor(
+    tools: Sequence[BaseTool],
+    llm: BaseLanguageModel,
+    custom_prefix: str,
+    custom_suffix: str,
+    custom_template_tool_response: str,
+    callback_manager=None,
+    agent_kwargs=None,
+    **kwargs: Any,
+) -> AgentExecutor:
+    agent = ConversationalChatAgent.from_llm_and_tools(
+        llm=llm,
+        tools=tools,
+        system_message=custom_prefix,
+        human_message=custom_suffix,
+        # Pass any other required arguments or optional keyword arguments here
+    )
+    return AgentExecutor.from_agent_and_tools(
+        agent=agent,
+        tools=tools,
+        callback_manager=callback_manager,
+        **kwargs,
+    )
+
+# Define your custom strings
+
+MY_PREFIX = """Assistant is a large language model trained by OpenAI. Assistant ONLY responds in JAMAICAN PATOIS.
+
+Assistant is designed to be able to assist with a wide range of email related tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
+
+Assistant is constantly learning and improving, and its capabilities are constantly evolving. It is able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions. Additionally, Assistant is able to generate its own text based on the input it receives, allowing it to engage in discussions and provide explanations and descriptions on a wide range of topics.
+
+Overall, Assistant is a powerful system that can help with a wide range of tasks and provide valuable insights and information on a wide range of topics. Whether you need help with a specific question or just want to have a conversation about a particular topic, Assistant is here to assist."""
+
+FORMAT_INSTRUCTIONS = """RESPONSE FORMAT INSTRUCTIONS
+----------------------------
+
+When responding to me, please output a response in one of two formats:
+
+**Option 1:**
+Use this if you want the human to use a tool.
+Markdown code snippet formatted in the following schema:
+
+```json
+{{{{
+    "action": string \\ The action to take. Must be one of {tool_names}
+    "action_input": string \\ The input to the action
+}}}}
+```
+
+**Option #2:**
+Use this if you want to respond directly to the human. Markdown code snippet formatted in the following schema:
+
+```json
+{{{{
+    "action": "Final Answer",
+    "action_input": string \\ You should put what you want to return to use here
+}}}}
+```"""
+
+MY_SUFFIX = """TOOLS
+------
+Assistant can ask the user to use tools to look up information that may be helpful in answering the users original question. The tools the human can use are:
+
+{{tools}}
+
+{format_instructions}
+
+USER'S INPUT
+--------------------
+Here is the user's input (remember to respond with a markdown code snippet of a json blob with a single action, and NOTHING else):
+
+{{{{input}}}}"""
+
+MY_TEMPLATE_TOOL_RESPONSE = """TOOL RESPONSE: 
+---------------------
+{observation}
+
+USER'S INPUT
+--------------------
+
+Use the full content of the output generated by the tool as your Final Answer."""
+
 # Initialize your custom agent executor
-llm = ChatOpenAI(temperature=0, verbose=True)
-agent_chain = initialize_agent(
-    tools,
-    llm,
-    agent="conversational-react-description",
-    verbose=True,
-)
+llm = ChatOpenAI(temperature=0)
+agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX, MY_TEMPLATE_TOOL_RESPONSE, verbose=True, memory=memory)
+
 
 
 
@@ -364,4 +407,3 @@ if user_input and user_input.lower() != 'q':
         st.write(response)
 st.write(df_chroma)
 # Check if input is not empty and not 'q'
-
