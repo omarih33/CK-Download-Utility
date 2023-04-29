@@ -271,7 +271,7 @@ def summarize_email(query: str) -> str:
     return f"Summarized email based on previous emails:\n{summarized_email}"
 
 
-@tool("Email writer")
+@tool("Email writer", return_direct=True)
 def generate_email(query: str) -> str:
     """This tool writes new emails and other content based on existing emails. Provide a FULL query describing the task."""
     # Find similar previous emails
