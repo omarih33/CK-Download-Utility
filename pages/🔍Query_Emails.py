@@ -291,7 +291,8 @@ def generate_email(query: str, user_input: str) -> str:
     email_chain = LLMChain(llm=llm, prompt=EMAIL_PROMPT)
 
     # Generate the new email
-    new_email = email_chain({"query": query, "context": context})
+    new_email = email_chain({"query": query, "context": context, "user_input": user_input})
+
 
     return f"{new_email}"
 
