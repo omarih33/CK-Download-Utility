@@ -296,9 +296,9 @@ def generate_email(query: str) -> str:
 
     # Generate the new email
     new_email = email_chain({"query": query, "context": context})
+    email_text = new_email['text']
 
-
-    return f"{new_email}"
+    return email_text
 
 tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
