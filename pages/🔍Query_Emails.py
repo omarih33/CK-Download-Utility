@@ -406,10 +406,10 @@ st.markdown("")
 
 user_input = st.text_input("Please ask a question or make a request(or 'q' to quit): ")
 
-st.write(df_chroma)
-# Check if input is not empty and not 'q'
-
 if user_input and user_input.lower() != 'q':
     with st.spinner('Processing your request...'):
         response = agent_chain.run(user_input)
         st.write(response)
+st.write(df_chroma)
+# Check if input is not empty and not 'q'
+
