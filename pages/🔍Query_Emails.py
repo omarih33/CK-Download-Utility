@@ -195,9 +195,6 @@ SQLQuery: SELECT email_name, click_rate FROM emails WHERE status = 'completed' O
 Question: "What is the average open rate for emails sent on weekends?"
 SQLQuery: SELECT AVG(open_rate) FROM emails WHERE status = 'completed' AND (strftime('%w', send_at) = '0' OR strftime('%w', send_at) = '6');
 
-Question: "Which type of content (keywords) generates the most engagement (clicks and opens)?"
-SQLQuery: WITH words AS (SELECT TRIM(regexp_replace(regexp_replace(content, '[^a-zA-Z\s]', ''), '\s{2,}', ' ')) AS cleaned_content, open_rate, click_rate FROM emails WHERE status = 'completed'), word_counts AS (SELECT LOWER(word) AS word, SUM(open_rate) AS total_open_rate, SUM(click_rate) AS total_click_rate, COUNT(*) AS word_count FROM (SELECT TRIM(SUBSTR(cleaned_content, instr(cleaned_content || ' ', ' ', 1 + instr(substr(cleaned_content, 2), ' ')), instr(cleaned_content || ' ', ' ', 1 + instr(substr(cleaned_content, 2), ' ')) - 1)) AS word, open_rate, click_rate FROM words) GROUP BY word) SELECT word, total_open_rate / word_count AS avg_open_rate, total_click_rate / word_count AS avg_click_rate FROM word_counts ORDER BY avg_open_rate DESC, avg_click_rate DESC LIMIT 5;
-
 Question: "Which published day of the week has the highest email engagement?"
 SQLQuery: SELECT strftime('%w', published_at) AS day_of_week, AVG(open_rate) AS avg_open_rate FROM emails WHERE status = 'completed' GROUP BY day_of_week ORDER BY avg_open_rate DESC LIMIT 1;
 
