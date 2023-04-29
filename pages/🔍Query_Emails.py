@@ -284,7 +284,7 @@ def generate_email(query: str, user_input: str) -> str:
     New email: """
 
     EMAIL_PROMPT = PromptTemplate(
-        template=email_prompt_template, input_variables=["context", "query"]
+        template=email_prompt_template, input_variables=["context", "query", "user_input"]
     )
 
     # Create a new LLMChain with the custom email prompt
