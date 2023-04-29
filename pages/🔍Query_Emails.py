@@ -282,9 +282,10 @@ def generate_email(query: str) -> str:
 
     # Custom prompt for generating emails
     email_prompt_template = """This is a laidback email newsletter about Squarespace resources. Using the following email context, {query}\n\n
+    
     Email Context: {context}
     
-    New email: """
+    """
 
     EMAIL_PROMPT = PromptTemplate(
         template=email_prompt_template, input_variables=["context", "query"]
