@@ -229,7 +229,7 @@ def print_email(query: str) -> str:
     # Extract email content
     context = "\n\n".join([email.page_content for email in similar_emails])
 
-    return f"\nEmail Result: {context}.\n"
+    return context
 
 
 @tool("Email Summarizer")
