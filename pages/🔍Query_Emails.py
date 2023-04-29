@@ -387,7 +387,7 @@ MY_TEMPLATE_TOOL_RESPONSE = """TOOL RESPONSE:
 USER'S INPUT
 --------------------
 
-Okay, so what is the response to my last comment? If using information obtained from the tools you must mention it explicitly without mentioning the tool names - I have forgotten all TOOL RESPONSES! Remember to respond with a markdown code snippet of a json blob with a single action, and NOTHING else."""
+If using information obtained from the tools you must mention it explicitly without mentioning the tool names - I have forgotten all TOOL RESPONSES! Remember to respond with a markdown code snippet of a json blob with a single action, and NOTHING else."""
 
 # Initialize your custom agent executor
 llm = ChatOpenAI(temperature=0)
