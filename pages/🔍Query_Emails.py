@@ -185,7 +185,6 @@ SQLQuery: SQL Query to run
 SQLResult: "Result of the SQLQuery"
 Answer: "Final answer here"
 
-
 Some examples:
 Question: "How many emails were sent in 2022?"
 SQLQuery: SELECT COUNT(*) FROM emails WHERE strftime('%Y', send_at) = '2022';
@@ -193,13 +192,7 @@ SQLQuery: SELECT COUNT(*) FROM emails WHERE strftime('%Y', send_at) = '2022';
 Question: "top 5 emails by click rate"
 SQLQuery: SELECT email_name, click_rate FROM emails WHERE status = 'completed' ORDER BY click_rate DESC LIMIT 5;
 
-Question: "What was the best performing email of 2023?"
-SQLQuery: SELECT email_name, open_rate, click_rate FROM emails WHERE strftime('%Y', published_at) = '2023' ORDER BY click_rate DESC LIMIT 1;
-
-Question: "What draft has the most potential based on the email name?"
-SQLQuery: SELECT email_name FROM emails WHERE status = 'draft';
-
-Question: "What is the average open rate for emails sent on weekends? 
+Question: "What is the average open rate for emails sent on weekends?"
 SQLQuery: SELECT AVG(open_rate) FROM emails WHERE status = 'completed' AND (strftime('%w', send_at) = '0' OR strftime('%w', send_at) = '6');
 
 Question: "Which type of content (keywords) generates the most engagement (clicks and opens)?"
@@ -208,11 +201,6 @@ SQLQuery: WITH words AS (SELECT TRIM(regexp_replace(regexp_replace(content, '[^a
 Question: "Which published day of the week has the highest email engagement?"
 SQLQuery: SELECT strftime('%w', published_at) AS day_of_week, AVG(open_rate) AS avg_open_rate FROM emails WHERE status = 'completed' GROUP BY day_of_week ORDER BY avg_open_rate DESC LIMIT 1;
 
-Question: "What's the average time between sent emails?"
-SQLQuery: SELECT AVG(julianday(next_published_at) - julianday(published_at)) * 24 AS avg_hours_between_emails FROM (    SELECT published_at, LEAD(published_at) OVER (ORDER BY published_at) AS next_published_at FROM emails WHERE status = 'completed');
-
-Question: "Which published day of the week has the highest email engagement?"
-SQLQuery: SELECT strftime('%w', published_at) AS day_of_week, AVG(open_rate) AS avg_open_rate FROM emails WHERE status = 'completed' GROUP BY day_of_week ORDER BY avg_open_rate DESC LIMIT 1;
 
 Question: {input}
 """
