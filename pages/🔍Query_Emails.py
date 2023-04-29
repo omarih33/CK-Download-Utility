@@ -188,6 +188,9 @@ Some examples:
 Question: "How many emails were sent in 2022?"
 SQLQuery: SELECT COUNT(*) FROM emails WHERE strftime('%Y', send_at) = '2022';
 
+Question: "What email had the most engagement in January 2023?"
+SQLQuery: SELECT email_name FROM emails WHERE published_at BETWEEN '2023-01-01' AND '2023-01-31' ORDER BY total_clicks DESC LIMIT 1
+
 Question: "top 5 emails by click rate"
 SQLQuery: SELECT email_name, click_rate FROM emails WHERE status = 'completed' ORDER BY click_rate DESC LIMIT 5;
 
