@@ -9,6 +9,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import pandas as pd
 from pydantic import BaseModel, Field
+
 from typing import List, Union
 
 
@@ -283,7 +284,6 @@ def generate_email(query: str) -> str:
 
     return f"{new_email}"
 
-from pydantic import BaseModel, Field
 
 class SqlIndexToolInput(BaseModel):
     query: str = Field()
@@ -298,7 +298,6 @@ class GenerateEmailInput(BaseModel):
     query: str = Field()
 
 
-from langchain.agents import Tool
 
 sql_index_tool = Tool(
     name="Email Analytics",
