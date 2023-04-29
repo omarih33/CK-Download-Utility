@@ -363,7 +363,7 @@ Markdown code snippet formatted in the following schema:
 ```
 
 **Option #2:**
-Use this if you want to respond directly to the human. Markdown code snippet formatted in the following schema:
+Use this to provide a final answer. Markdown code snippet formatted in the following schema:
 
 ```json
 {{{{
@@ -376,7 +376,7 @@ MY_TEMPLATE_TOOL_RESPONSE = """TOOL RESPONSE:
 ---------------------
 {observation}
 
-This is your Final Answer. USE IT!"""
+"""
 
 # Initialize your custom agent executor
 llm = ChatOpenAI(temperature=0)
