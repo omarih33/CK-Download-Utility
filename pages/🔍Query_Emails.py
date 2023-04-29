@@ -295,7 +295,7 @@ llm = ChatOpenAI(temperature=0, verbose=True)
 agent_chain = initialize_agent(
     tools,
     llm,
-    agent="zero-shot-react-description",
+    agent="chat-zero-shot-react-description",
     verbose=True,
 )
 
