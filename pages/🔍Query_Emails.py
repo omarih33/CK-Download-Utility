@@ -268,8 +268,8 @@ def summarize_email(query: str) -> str:
     return f"Summarized email based on previous emails:\n{summarized_email}"
 
 
-@tool("Email writer", return_direct=True)
-def generate_email(query: str, user_input) -> str:
+@tool("Email writer")
+def generate_email(query: str) -> str:
     """This tool writes emails based on previous emails. Input is email subject."""
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
@@ -278,20 +278,20 @@ def generate_email(query: str, user_input) -> str:
     context = "\n\n".join([email.page_content for email in similar_emails])
 
     # Custom prompt for generating emails
-    email_prompt_template = """This is a laidback email newsletter about Squarespace resources. Using the following email context, {user_input}\n\n
-    Email Context: {query}{context}
+    email_prompt_template = """This is a laidback email newsletter about Squarespace resources. Using the following email context, {query}\n\n
+    Email Context: {context}
     
     New email: """
 
     EMAIL_PROMPT = PromptTemplate(
-        template=email_prompt_template, input_variables=["context", "query", "user_input"]
+        template=email_prompt_template, input_variables=["context", "query"]
     )
 
     # Create a new LLMChain with the custom email prompt
     email_chain = LLMChain(llm=llm, prompt=EMAIL_PROMPT)
 
     # Generate the new email
-    new_email = email_chain({"query": query, "context": context, "user_input": user_input})
+    new_email = email_chain({"query": query, "context": context})
 
 
     return f"{new_email}"
