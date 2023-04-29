@@ -379,8 +379,13 @@ Okay, so what is the answer to my original question? Remember to respond with a 
 
 # Initialize your custom agent executor
 llm = ChatOpenAI(temperature=0, verbose=True)
-agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX, MY_TEMPLATE_TOOL_RESPONSE, verbose=True, memory=memory)
-
+agent_chain = initialize_agent(
+    tools,
+    llm,
+    agent="zero-shot-react-description",
+    callback_manager=manager,
+    verbose=True,
+)
 
 
 
