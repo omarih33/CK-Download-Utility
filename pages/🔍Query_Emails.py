@@ -380,7 +380,7 @@ MY_TEMPLATE_TOOL_RESPONSE = """TOOL RESPONSE:
 
 USER'S INPUT
 --------------------
-Use the Tool Response as your Final Answer."""
+Your Final Answer is {observation}."""
 
 # Initialize your custom agent executor
 llm = ChatOpenAI(temperature=0)
