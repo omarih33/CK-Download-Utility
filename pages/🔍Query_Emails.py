@@ -407,5 +407,7 @@ if user_input and user_input.lower() != 'q':
     with st.spinner('Processing your request...'):
         response = agent_chain.run(user_input)
         st.write(response)
-st.write(df_chroma)
+# Check if df_chroma is defined before writing it to the Streamlit app
+if 'df_chroma' in locals():
+    st.write(df_chroma)
 # Check if input is not empty and not 'q'
