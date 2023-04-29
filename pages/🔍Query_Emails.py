@@ -240,7 +240,7 @@ def print_email(query: str) -> str:
     return context
 
 
-@tool("Email Summarizer")
+@tool("Email Summarizer", return_direct=True)
 def summarize_email(query: str) -> str:
     """DO NOT USE Unless the query asks for a summary."""
     # Find similar previous emails
@@ -268,7 +268,7 @@ def summarize_email(query: str) -> str:
     return f"Summarized email based on previous emails:\n{summarized_email}"
 
 
-@tool("Email writer")
+@tool("Email writer", return_direct=True)
 def generate_email(query: str) -> str:
     """This tool writes emails based on previous emails. Input is email subject."""
     # Find similar previous emails
