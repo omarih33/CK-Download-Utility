@@ -274,8 +274,40 @@ tools = [generate_email, sql_index_tool, summarize_email, print_email]
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
+
+def initialize_custom_agent_executor(
+    tools: Sequence[BaseTool],
+    llm: BaseLanguageModel,
+    custom_prefix: str,
+    custom_suffix: str,
+    custom_template_tool_response: str,
+    callback_manager=None,
+    agent_kwargs=None,
+    **kwargs: Any,
+) -> AgentExecutor:
+    agent = ConversationalChatAgent.from_llm_and_tools(
+        llm=llm,
+        tools=tools,
+        system_message=custom_prefix,
+        human_message=custom_suffix,
+        # Pass any other required arguments or optional keyword arguments here
+    )
+    return AgentExecutor.from_agent_and_tools(
+        agent=agent,
+        tools=tools,
+        callback_manager=callback_manager,
+        **kwargs,
+    )
+
+# Define your custom strings
+MY_PREFIX = "Your custom prefix here"
+MY_SUFFIX = "Your custom suffix here"
+MY_TEMPLATE_TOOL_RESPONSE = "Your custom template tool response here"
+
+# Initialize your custom agent executor
 llm = ChatOpenAI(temperature=0)
-agent_chain = initialize_agent(tools, llm, agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
+agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX, MY_TEMPLATE_TOOL_RESPONSE, verbose=True, memory=memory)
+
 
 
 
