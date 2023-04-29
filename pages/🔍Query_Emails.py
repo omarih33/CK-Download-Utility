@@ -227,7 +227,7 @@ def sql_index_tool(query: str) -> str:
 
 
 
-@tool("Simple Email Retrieval")
+@tool("Simple Email Retrieval", return_direct=true)
 def print_email(query: str) -> str:
     """Use this tool when the user wants to see an email."""
     
