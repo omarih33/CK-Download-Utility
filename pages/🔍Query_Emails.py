@@ -219,17 +219,9 @@ def sql_index_tool(query: str) -> str:
     return f"\nThe SQL Result is: {sql_response}\n"
 
 
-
-
-
-
-
-
-
-
 @tool("Email Retrieval and Display")
 def print_email(query: str) -> str:
-    """Use this tool when you need to show the user an email."""
+    """Use this tool when you need to find an email."""
     
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
@@ -237,12 +229,12 @@ def print_email(query: str) -> str:
     # Extract email content
     context = "\n\n".join([email.page_content for email in similar_emails])
 
-    return f"\nEmail: {context}.\n"
+    return f"\nEmail Result: {context}.\n"
 
 
 @tool("Email Summarizer")
 def summarize_email(query: str) -> str:
-    """DO NOT USE Unless the query asks for a summary."""
+    """DO NOT USE unless the query asks for a summary."""
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
 
@@ -326,7 +318,7 @@ def initialize_custom_agent_executor(
 
 # Define your custom strings
 
-MY_PREFIX = """Assistant is a large language model trained by OpenAI. Assistant ONLY responds in JAMAICAN PATOIS.
+MY_PREFIX = """Assistant is a large language model trained by OpenAI.
 
 Assistant is designed to be able to assist with a wide range of email related tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
 
@@ -356,7 +348,7 @@ Use this if you want to respond directly to the human. Markdown code snippet for
 ```json
 {{{{
     "action": "Final Answer",
-    "action_input": string \\ You should answer the humans question
+    "action_input": string \\ The response from the tool
 }}}}
 ```"""
 
