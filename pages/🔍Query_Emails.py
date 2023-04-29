@@ -262,7 +262,7 @@ def summarize_email(query: str) -> str:
 
 @tool("Email writer")
 def generate_email(query: str) -> str:
-    """This tool writes emails based on previous emails. Input is email subject."""
+    """This tool writes emails based on previous emails."""
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
 
