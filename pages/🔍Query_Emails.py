@@ -184,23 +184,6 @@ SQLQuery: SQL Query to run
 SQLResult: "Result of the SQLQuery"
 Answer: "Final answer here"
 
-Some examples:
-Question: "How many emails were sent in 2022?"
-SQLQuery: SELECT COUNT(*) FROM emails WHERE strftime('%Y', send_at) = '2022';
-
-Question: "What email had the most engagement in January 2023?"
-SQLQuery: SELECT email_name FROM emails WHERE published_at BETWEEN '2023-01-01' AND '2023-01-31' ORDER BY total_clicks DESC LIMIT 1
-
-Question: "top 5 emails by click rate"
-SQLQuery: SELECT email_name, click_rate FROM emails WHERE status = 'completed' ORDER BY click_rate DESC LIMIT 5;
-
-Question: "What is the average open rate for emails sent on weekends?"
-SQLQuery: SELECT AVG(open_rate) FROM emails WHERE status = 'completed' AND (strftime('%w', send_at) = '0' OR strftime('%w', send_at) = '6');
-
-Question: "Which published day of the week has the highest email engagement?"
-SQLQuery: SELECT strftime('%w', published_at) AS day_of_week, AVG(open_rate) AS avg_open_rate FROM emails WHERE status = 'completed' GROUP BY day_of_week ORDER BY avg_open_rate DESC LIMIT 1;
-
-
 Question: {input}
 """
 PROMPT = PromptTemplate(
@@ -216,7 +199,24 @@ db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT)
 
 @tool("Email Analytics")
 def sql_index_tool(query: str) -> str:
-    """Use this for email analytics. It will query a table of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published_at, send_at, public, thumbnail_url, and status (draft/completed). Query structured data using SQL syntax."""
+    """Use this for email analytics. It will query a table of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published_at, send_at, public, thumbnail_url, and status (draft/completed). Query structured data using SQL syntax.
+    Some examples:
+    Question: "How many emails were sent in 2022?"
+    SQLQuery: SELECT COUNT(*) FROM emails WHERE strftime('%Y', send_at) = '2022';
+
+    Question: "What email had the most engagement in January 2023?"
+    SQLQuery: SELECT email_name FROM emails WHERE published_at BETWEEN '2023-01-01' AND '2023-01-31' ORDER BY total_clicks DESC LIMIT 1
+
+    Question: "top 5 emails by click rate"
+    SQLQuery: SELECT email_name, click_rate FROM emails WHERE status = 'completed' ORDER BY click_rate DESC LIMIT 5;
+
+    Question: "What is the average open rate for emails sent on weekends?"
+    SQLQuery: SELECT AVG(open_rate) FROM emails WHERE status = 'completed' AND (strftime('%w', send_at) = '0' OR strftime('%w', send_at) = '6');
+
+    Question: "Which published day of the week has the highest email engagement?"
+    SQLQuery: SELECT strftime('%w', published_at) AS day_of_week, AVG(open_rate) AS avg_open_rate FROM emails WHERE status = 'completed' GROUP BY day_of_week ORDER BY avg_open_rate DESC LIMIT 1;
+
+    """
     query = query.replace('"', '')
     sql_response = db_chain.run(query)
     return f"\nThe SQL Result is: {sql_response}\n"
