@@ -229,7 +229,7 @@ def sql_index_tool(query: str) -> str:
 
 @tool("Simple Email Retrieval")
 def print_email(query: str) -> str:
-    """Use this tool when you need to show the user an email."""
+    """Use this tool when the user wants to see an email."""
     
     # Find similar previous emails
     similar_emails = content_index.similarity_search(query, k=1)
@@ -237,7 +237,7 @@ def print_email(query: str) -> str:
     # Extract email content
     context = "\n\n".join([email.page_content for email in similar_emails])
 
-    return f"\nEmail: {context}.\n"
+    return context
 
 
 @tool("Email Summarizer")
