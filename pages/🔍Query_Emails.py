@@ -373,12 +373,12 @@ MY_TEMPLATE_TOOL_RESPONSE = """TOOL RESPONSE:
 
 USER'S INPUT
 --------------------
-Okay, so what is the response to my original question? If using information from tools, you must say it explicitly - I have forgotten all TOOL RESPONSES! Remember to respond with a markdown code snippet of a json blob with a single action, and NOTHING else.
+Okay, so what is the answer to my original question? Remember to respond with a markdown code snippet of a json blob with a single action, and NOTHING else.
 
 """
 
 # Initialize your custom agent executor
-llm = ChatOpenAI(temperature=0)
+llm = ChatOpenAI(temperature=0, verbose=True)
 agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX, MY_TEMPLATE_TOOL_RESPONSE, verbose=True, memory=memory)
 
 
