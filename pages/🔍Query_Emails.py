@@ -372,10 +372,17 @@ Use this if you want to respond directly to the human. Markdown code snippet for
 }}}}
 ```"""
 
+MY_TEMPLATE_TOOL_RESPONSE = """TOOL RESPONSE: 
+---------------------
+{observation}
+
+This is your Final Answer. USE IT!"""
 
 # Initialize your custom agent executor
 llm = ChatOpenAI(temperature=0)
-agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX, verbose=True, memory=memory)
+agent_chain = initialize_custom_agent_executor(tools, llm, MY_PREFIX, MY_SUFFIX, MY_TEMPLATE_TOOL_RESPONSE, verbose=True, memory=memory)
+
+
 
 
 
