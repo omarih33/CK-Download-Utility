@@ -211,7 +211,6 @@ db_chain = SQLDatabaseChain(llm=llm1, database=sql_database, prompt=PROMPT)
 
 
 
-@tool("Email Analytics")
 def sql_index_tool(query: str) -> str:
     """Use this for email analytics. It will query a table of emails where columns are id, email_name, description, content, open_rate, click_rate, unsubscribes, total_clicks, recipients, sent_from, published_at, send_at, public, thumbnail_url, and status (draft/completed). Query structured data using SQL syntax."""
     query = query.replace('"', '')
@@ -219,7 +218,6 @@ def sql_index_tool(query: str) -> str:
     return f"\nThe SQL Result is: {sql_response}\n"
 
 
-@tool("Email Retrieval and Display")
 def print_email(query: str) -> str:
     """Use this tool when you need to find an email."""
     
@@ -232,7 +230,6 @@ def print_email(query: str) -> str:
     return context
 
 
-@tool("Email Summarizer")
 def summarize_email(query: str) -> str:
     """DO NOT USE unless the query asks for a summary."""
     # Find similar previous emails
@@ -260,7 +257,6 @@ def summarize_email(query: str) -> str:
     return f"Summarized email based on previous emails:\n{summarized_email}"
 
 
-@tool("Email writer")
 def generate_email(query: str) -> str:
     """This tool writes emails based on previous emails."""
     # Find similar previous emails
@@ -287,7 +283,58 @@ def generate_email(query: str) -> str:
 
     return f"{new_email}"
 
-tools = [generate_email, sql_index_tool, summarize_email, print_email]
+from pydantic import BaseModel, Field
+
+class SqlIndexToolInput(BaseModel):
+    query: str = Field()
+
+class PrintEmailInput(BaseModel):
+    query: str = Field()
+
+class SummarizeEmailInput(BaseModel):
+    query: str = Field()
+
+class GenerateEmailInput(BaseModel):
+    query: str = Field()
+
+
+from langchain.agents import Tool
+
+sql_index_tool = Tool(
+    name="Email Analytics",
+    func=sql_index_tool,
+    description="Use this for email analytics. It will query a table of emails...",
+    args_schema=SqlIndexToolInput
+)
+
+print_email_tool = Tool(
+    name="Email Retrieval and Display",
+    func=print_email,
+    description="Use this tool when you need to find an email.",
+    args_schema=PrintEmailInput
+)
+
+summarize_email_tool = Tool(
+    name="Email Summarizer",
+    func=summarize_email,
+    description="DO NOT USE unless the query asks for a summary.",
+    args_schema=SummarizeEmailInput
+)
+
+generate_email_tool = Tool(
+    name="Email writer",
+    func=generate_email,
+    description="This tool writes emails based on previous emails.",
+    args_schema=GenerateEmailInput
+)
+
+tools = [
+    sql_index_tool,
+    print_email_tool,
+    summarize_email_tool,
+    generate_email_tool,
+]
+
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 # Initialize your custom agent executor
