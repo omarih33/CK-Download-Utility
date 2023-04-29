@@ -10,6 +10,10 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from pydantic import BaseModel, Field
 from typing import List, Union
+
+
+from langchain.agents.conversational_chat.base import ConversationalChatAgent
+
 from langchain import SQLDatabase, SQLDatabaseChain, SerpAPIWrapper, LLMChain, OpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.embeddings.openai import OpenAIEmbeddings
