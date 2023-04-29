@@ -2,6 +2,8 @@ import os
 import logging
 import sys
 import re
+
+from typing import Any, List, Optional, Sequence, Tuple
 import streamlit as st
 from datetime import datetime
 from bs4 import BeautifulSoup
