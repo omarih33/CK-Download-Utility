@@ -225,3 +225,109 @@ def download_broadcasts(api_client: KitAPI, date_range: List[str], published_fil
         progress_container.empty()  # Clean up progress bar
         st.error(f"Error downloading broadcasts: {str(e)}")
         return pd.DataFrame()
+
+
+def _matches_filters(broadcast: Dict, published_filter: str, public_filter: str) -> bool:
+    """
+    Check if broadcast matches the selected filters
+    """
+    if published_filter != "All":
+        is_published = broadcast.get("send_at") is not None
+        if (published_filter == "Published") != is_published:
+            return False
+
+    if public_filter != "All":
+        is_public = broadcast.get("public", False)
+        if (public_filter == "Public") != is_public:
+            return False
+
+    return True
+
+def save_to_markdown(df: pd.DataFrame, output_dir: str) -> str:
+    """
+    Save broadcasts to individual markdown files and create a ZIP
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    for _, row in df.iterrows():
+        filename = f"{row.iloc[0]}.md"
+        file_path = os.path.join(output_dir, filename)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            row = row.str.strip()
+            f.write(row.to_markdown())
+
+    # Create ZIP archive
+    shutil.make_archive(output_dir, 'zip', output_dir)
+    return f"{output_dir}.zip"
+
+def main():
+    st.title("Kit Email Utility")
+    st.markdown("Download and analyze your email broadcasts from Kit (formerly ConvertKit).")
+    
+    # Initialize session state
+    if "df" not in st.session_state:
+        st.session_state.df = None
+
+    api_secret = st.text_input("API Secret", type="password", 
+                              help="Find this in your Kit Account Settings")
+
+    if api_secret:
+        api_client = KitAPI(api_secret)
+
+        # Create layout columns
+        col1, col2, col3 = st.columns(3)
+
+        # Date range selector
+        date_range = col1.date_input(
+            "Date range",
+            [datetime(2000, 1, 1).date(), datetime.now().date()]
+        )
+
+        # Convert dates to ISO format with timezone
+        start_datetime = datetime.combine(date_range[0], time.min).isoformat() + "Z"
+        end_datetime = datetime.combine(date_range[1], time.min).isoformat() + "Z"
+        date_range = [start_datetime, end_datetime]
+
+        # Filters
+        published_filter = col2.selectbox("Published status", ["All", "Published", "Draft"])
+        public_filter = col3.selectbox("Public status", ["All", "Public", "Private"])
+
+        if st.button("Download Broadcasts"):
+            try:
+                df = download_broadcasts(api_client, date_range, published_filter, public_filter)
+                st.session_state.df = df
+                
+                if not df.empty:
+                    st.download_button(
+                        label="Save to CSV",
+                        data=df.to_csv(index=False),
+                        file_name="kit_broadcasts.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.warning("No broadcasts found matching your criteria.")
+            except Exception as e:
+                st.error(f"Error downloading broadcasts: {str(e)}")
+
+        if st.button("Save to Markdown") and st.session_state.df is not None:
+            try:
+                output_dir = 'output_markdown'
+                zip_file = save_to_markdown(st.session_state.df, output_dir)
+                
+                with open(zip_file, "rb") as f:
+                    st.download_button(
+                        label="Download Markdown ZIP",
+                        data=f,
+                        file_name="broadcasts_markdown.zip",
+                        mime="application/zip",
+                    )
+            except Exception as e:
+                st.error(f"Error creating Markdown files: {str(e)}")
+
+        # Display the DataFrame
+        if st.session_state.df is not None:
+            st.dataframe(st.session_state.df, use_container_width=True)
+
+if __name__ == "__main__":
+    main()
