@@ -36,33 +36,76 @@ class KitAPI:
         response.raise_for_status()
         return response
 
-    @st.cache_data(show_spinner=False)
     def get_broadcasts(self, cursor: Optional[str] = None, per_page: int = DEFAULT_PER_PAGE) -> Dict:
         """
         Get broadcasts with cursor-based pagination
         """
-        params = {'per_page': per_page}
-        if cursor:
-            params['after'] = cursor
+        # Use a static cache function to properly handle class method caching
+        @st.cache_data(show_spinner=False)
+        def _cached_get_broadcasts(api_secret: str, cursor: Optional[str], per_page: int) -> Dict:
+            headers = {
+                'Accept': 'application/json',
+                'X-Kit-Api-Key': api_secret
+            }
+            params = {'per_page': per_page}
+            if cursor:
+                params['after'] = cursor
+                
+            url = f"{API_BASE_URL}/broadcasts"
+            response = requests.get(url, headers=headers, params=params)
             
-        response = self._make_request('GET', 'broadcasts', params=params)
-        return response.json() if response else None
+            if response.status_code == 429:
+                st.error("Rate limit exceeded. Please wait a moment and try again.")
+                return None
+                
+            response.raise_for_status()
+            return response.json() if response.ok else None
+            
+        return _cached_get_broadcasts(self.api_secret, cursor, per_page)
 
-    @st.cache_data(show_spinner=False)
     def get_broadcast_details(self, broadcast_id: int) -> Dict:
         """
         Get detailed information for a specific broadcast
         """
-        response = self._make_request('GET', f'broadcasts/{broadcast_id}')
-        return response.json().get('broadcast') if response else None
+        @st.cache_data(show_spinner=False)
+        def _cached_get_broadcast_details(api_secret: str, broadcast_id: int) -> Dict:
+            headers = {
+                'Accept': 'application/json',
+                'X-Kit-Api-Key': api_secret
+            }
+            url = f"{API_BASE_URL}/broadcasts/{broadcast_id}"
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 429:
+                st.error("Rate limit exceeded. Please wait a moment and try again.")
+                return None
+                
+            response.raise_for_status()
+            return response.json().get('broadcast') if response.ok else None
+            
+        return _cached_get_broadcast_details(self.api_secret, broadcast_id)
 
-    @st.cache_data(show_spinner=False)
     def get_broadcast_stats(self, broadcast_id: int) -> Dict:
         """
         Get statistics for a specific broadcast
         """
-        response = self._make_request('GET', f'broadcasts/{broadcast_id}/stats')
-        return response.json().get('broadcast', {}).get('stats', {}) if response else None
+        @st.cache_data(show_spinner=False)
+        def _cached_get_broadcast_stats(api_secret: str, broadcast_id: int) -> Dict:
+            headers = {
+                'Accept': 'application/json',
+                'X-Kit-Api-Key': api_secret
+            }
+            url = f"{API_BASE_URL}/broadcasts/{broadcast_id}/stats"
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 429:
+                st.error("Rate limit exceeded. Please wait a moment and try again.")
+                return None
+                
+            response.raise_for_status()
+            return response.json().get('broadcast', {}).get('stats', {}) if response.ok else None
+            
+        return _cached_get_broadcast_stats(self.api_secret, broadcast_id)
 
 def remove_html_tags(html_content: str) -> str:
     """
