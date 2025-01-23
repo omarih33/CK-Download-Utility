@@ -347,5 +347,15 @@ def main():
         if st.session_state.df is not None:
             st.dataframe(st.session_state.df, use_container_width=True)
 
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center'>
+    Made with ❤️ by [Omari Harebin](https://omariharebin.com)
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 if __name__ == "__main__":
     main()
