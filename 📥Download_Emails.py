@@ -264,6 +264,8 @@ def download_broadcasts(api_client: KitAPI, date_range: List[str], published_fil
         progress_container.empty()  # Clean up progress bar
         st.error(f"Error downloading broadcasts: {str(e)}")
         return pd.DataFrame()
+
+
         
 def _matches_filters(broadcast: Dict, published_filter: str, public_filter: str) -> bool:
     """
