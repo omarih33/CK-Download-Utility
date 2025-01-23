@@ -165,17 +165,22 @@ class KitAPI:
         return _cached_get_broadcast_stats(self.api_secret, broadcast_id)
 
 def download_broadcasts(api_client: KitAPI, date_range: List[str], published_filter: str, public_filter: str) -> pd.DataFrame:
-    """Download broadcasts with filtering and pagination"""
+    """Download broadcasts with filtering and pagination using batch processing"""
     all_broadcasts = []
     cursor = None
     start_datetime = datetime.fromisoformat(date_range[0].replace('Z', '+00:00'))
     end_datetime = datetime.fromisoformat(date_range[1].replace('Z', '+00:00'))
 
+    # Create containers for progress information
     progress_container = st.empty()
     progress_bar = progress_container.progress(0)
-    processed_count = 0
-    total_processed = 0
-    batch_size = DEFAULT_PER_PAGE
+    status_container = st.empty()
+    
+    # Use a larger page size to reduce the number of pagination calls
+    batch_size = 1000  # Maximum allowed by Kit API
+    
+    # Create a cache for broadcast details and stats
+    broadcast_cache = {}
 
     try:
         # First, get total count for better progress tracking
@@ -193,19 +198,53 @@ def download_broadcasts(api_client: KitAPI, date_range: List[str], published_fil
             if not broadcasts:
                 break
 
+            # First, filter broadcasts by date and status
+            filtered_broadcasts = []
             for broadcast in broadcasts:
-                details = api_client.get_broadcast_details(broadcast["id"])
-                if not details or "created_at" not in details:
+                if "created_at" not in broadcast:
                     continue
-
-                created_at = datetime.fromisoformat(details["created_at"].replace('Z', '+00:00'))
-                
+                    
+                created_at = datetime.fromisoformat(broadcast["created_at"].replace('Z', '+00:00'))
                 if start_datetime <= created_at <= end_datetime:
-                    if _matches_filters(details, published_filter, public_filter):
-                        stats = api_client.get_broadcast_stats(broadcast["id"])
-                        details.update(stats or {})
+                    if _matches_filters(broadcast, published_filter, public_filter):
+                        filtered_broadcasts.append(broadcast)
+            
+            # Update progress
+            status_container.text(f"Processing batch of {len(filtered_broadcasts)} broadcasts...")
+            
+            # Process broadcasts in smaller chunks to optimize API calls
+            chunk_size = 10
+            for i in range(0, len(filtered_broadcasts), chunk_size):
+                chunk = filtered_broadcasts[i:i + chunk_size]
+                
+                # Get details and stats for the chunk
+                for broadcast in chunk:
+                    broadcast_id = broadcast["id"]
+                    
+                    # Check cache first
+                    if broadcast_id in broadcast_cache:
+                        broadcast.update(broadcast_cache[broadcast_id])
+                        continue
+                        
+                    # Get details and stats
+                    time_module.sleep(0.5)  # Add small delay between requests
+                    details = api_client.get_broadcast_details(broadcast_id)
+                    if details:
+                        time_module.sleep(0.5)  # Add small delay between requests
+                        stats = api_client.get_broadcast_stats(broadcast_id)
+                        if stats:
+                            details.update(stats)
+                        
+                        # Cache the results
+                        broadcast_cache[broadcast_id] = details
                         broadcast.update(details)
-                        all_broadcasts.append(broadcast)
+                        
+                all_broadcasts.extend(chunk)
+                
+                # Update progress
+                progress = len(all_broadcasts) / (total_processed or batch_size)
+                progress_bar.progress(min(progress, 1.0))
+                status_container.text(f"Downloaded {len(all_broadcasts)} broadcasts...")
 
                 processed_count += 1
                 progress = min(processed_count / max(total_processed, batch_size), 1.0)
@@ -225,7 +264,6 @@ def download_broadcasts(api_client: KitAPI, date_range: List[str], published_fil
         progress_container.empty()  # Clean up progress bar
         st.error(f"Error downloading broadcasts: {str(e)}")
         return pd.DataFrame()
-
 
 def _matches_filters(broadcast: Dict, published_filter: str, public_filter: str) -> bool:
     """
