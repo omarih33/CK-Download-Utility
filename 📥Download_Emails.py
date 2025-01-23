@@ -262,8 +262,26 @@ def save_to_markdown(df: pd.DataFrame, output_dir: str) -> str:
     return f"{output_dir}.zip"
 
 def main():
-    st.title("Kit Email Utility")
-    st.markdown("Download and analyze your email broadcasts from Kit (formerly ConvertKit).")
+
+    st.title("Kit Email Archive Tool")
+    
+    st.markdown("""
+    Welcome! This tool helps you download and save your Kit (formerly ConvertKit) email broadcasts. 
+    Whether you want to create a backup, analyze your content, or just keep a record of your emails, 
+    I'll guide you through the process step by step.
+    """)
+    
+    with st.expander("🔑 Where to Find Your API Key", expanded=True):
+        st.markdown("""
+        To get started, you'll need your Kit API key. Here's how to find it:
+        
+        1. Log into your Kit account
+        2. Go to Settings (click your avatar in the top right)
+        3. Look for "API & Webhooks"
+        4. Your API key will be listed there. If you don't see one, you can create a new one
+        
+        Your API key is like a secure password for accessing your data - keep it safe and don't share it publicly.
+        """)
     
     # Initialize session state
     if "df" not in st.session_state:
