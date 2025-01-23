@@ -264,6 +264,10 @@ def save_to_markdown(df: pd.DataFrame, output_dir: str) -> str:
 def main():
 
     st.title("Kit Email Archive Tool")
+    st.markdown(
+    "<small>by [Omari Harebin](https://omariharebin.com/tools)</small>", 
+    unsafe_allow_html=True
+)
     
     st.markdown("""
     Welcome! This tool helps you download and save your Kit (formerly ConvertKit) email broadcasts. 
@@ -347,15 +351,7 @@ def main():
         if st.session_state.df is not None:
             st.dataframe(st.session_state.df, use_container_width=True)
 
-st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center'>
-    Made with ❤️ by [Omari Harebin](https://omariharebin.com)
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+
 
 if __name__ == "__main__":
     main()
