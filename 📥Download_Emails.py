@@ -1,354 +1,338 @@
 import streamlit as st
 import requests
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import pandas as pd
-import shutil
-import os
+import io, zipfile, re
 import time as time_module
 from typing import Dict, List, Optional
-from bs4 import BeautifulSoup
 from collections import deque
-from datetime import datetime, timedelta
 
-# Constants
+# ──────────────────────────────────────────────────────────────────────────────
+# Config
+# ──────────────────────────────────────────────────────────────────────────────
 API_BASE_URL = "https://api.kit.com/v4"
-DEFAULT_PER_PAGE = 500
-RATE_LIMIT_WINDOW = 60  # seconds
-MAX_REQUESTS_PER_WINDOW = 120  # for API key auth
+DEFAULT_PER_PAGE = 200          # reasonable page size to keep payloads smooth
+RATE_LIMIT_WINDOW = 60          # seconds
+MAX_REQUESTS_PER_WINDOW = 120   # Kit API key auth published limit
+GENTLE_PACING_SEC = 0.66        # ~90 req/min steady pace to avoid 429s
+MAX_RETRIES = 5                 # for 429 / transient network errors
 
+st.set_page_config(page_title="Kit Email Archive Tool", layout="wide")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Utilities
+# ──────────────────────────────────────────────────────────────────────────────
+def _parse_iso_z(dt_str: Optional[str]) -> Optional[datetime]:
+    if not dt_str:
+        return None
+    try:
+        # normalize 'Z' to UTC tzinfo
+        return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+def _slug(s: str) -> str:
+    s = (s or "").strip().lower()
+    s = re.sub(r"[^\w\-]+", "-", s)
+    s = re.sub(r"-{2,}", "-", s).strip("-")
+    return s or "broadcast"
+
+def in_range(created_at: Optional[str], start_dt: datetime, end_dt: datetime) -> bool:
+    dt = _parse_iso_z(created_at)
+    return bool(dt and (start_dt <= dt <= end_dt))
+
+def matches_filters(thing: Dict, published_filter: str, public_filter: str) -> bool:
+    if published_filter != "All":
+        is_published = thing.get("send_at") is not None
+        if (published_filter == "Published") != is_published:
+            return False
+    if public_filter != "All":
+        is_public = bool(thing.get("public", False))
+        if (public_filter == "Public") != is_public:
+            return False
+    return True
+
+def save_to_markdown_zip(df: pd.DataFrame) -> bytes:
+    """
+    Build an in-memory ZIP containing one .md per broadcast with YAML frontmatter
+    and the email body (html/plain text if available).
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for _, r in df.iterrows():
+            subj = r.get("subject") or r.get("title") or f"Broadcast {r.get('id')}"
+            sent = r.get("send_at") or r.get("created_at") or ""
+            body = (
+                r.get("content")
+                or r.get("html_content")
+                or r.get("plain_text")
+                or r.get("body")
+                or ""
+            )
+            fname = f"{_slug(str(sent)[:10])}-{_slug(str(subj))[:80]}.md"
+            md = f"""---
+id: {r.get("id")}
+subject: "{str(subj).replace('"', "'")}"
+send_at: "{sent}"
+public: {bool(r.get("public", False))}
+---
+
+{body}
+"""
+            zf.writestr(fname, md)
+    buf.seek(0)
+    return buf.read()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Rate limiting + API client
+# ──────────────────────────────────────────────────────────────────────────────
 class RateLimiter:
-    """Handles rate limiting for API requests"""
     def __init__(self, max_requests: int, window_seconds: int):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.requests = deque()
-        self.retry_count = 0
-        self.max_retries = 3
 
     def wait_if_needed(self):
-        """Calculate wait time and sleep if necessary"""
         now = datetime.now()
-        
-        # Remove requests outside the current window
         while self.requests and self.requests[0] < now - timedelta(seconds=self.window_seconds):
             self.requests.popleft()
-
-        # If we're at the limit, wait until we can make another request
         if len(self.requests) >= self.max_requests:
-            oldest_request = self.requests[0]
-            wait_time = (oldest_request + timedelta(seconds=self.window_seconds) - now).total_seconds()
-            if wait_time > 0:
-                # Add exponential backoff if we've retried multiple times
-                if self.retry_count > 0:
-                    wait_time *= (2 ** self.retry_count)
-                    wait_time = min(wait_time, 60)  # Cap at 60 seconds
-                
-                st.warning(f"Rate limit reached. Waiting {wait_time:.1f} seconds before retrying...")
-                time_module.sleep(wait_time)
-                self.retry_count += 1
-                return True
-
-        # Add current request to the window
-        self.requests.append(now)
-        self.retry_count = 0
-        return False
+            oldest = self.requests[0]
+            wait = (oldest + timedelta(seconds=self.window_seconds) - now).total_seconds()
+            if wait > 0:
+                st.info(f"Cooling down for {wait:.1f}s to respect API limits…")
+                time_module.sleep(wait)
+        self.requests.append(datetime.now())
 
 class KitAPI:
-    """Kit API client handling authentication and API requests"""
     def __init__(self, api_secret: str):
-        self.api_secret = api_secret
         self.headers = {
-            'Accept': 'application/json',
-            'X-Kit-Api-Key': api_secret
+            "Accept": "application/json",
+            "X-Kit-Api-Key": api_secret
         }
-        self.rate_limiter = RateLimiter(MAX_REQUESTS_PER_WINDOW, RATE_LIMIT_WINDOW)
+        self.limiter = RateLimiter(MAX_REQUESTS_PER_WINDOW, RATE_LIMIT_WINDOW)
 
-    def _make_request(self, method: str, endpoint: str, params: Optional[Dict] = None, json: Optional[Dict] = None) -> requests.Response:
-        """Make an API request with rate limiting and error handling"""
+    def _request(self, method: str, endpoint: str, params: Optional[Dict] = None) -> Optional[requests.Response]:
         url = f"{API_BASE_URL}/{endpoint}"
-        
+        retries = 0
         while True:
-            # Check rate limit and wait if necessary
-            self.rate_limiter.wait_if_needed()
-            
+            self.limiter.wait_if_needed()
             try:
-                response = requests.request(method, url, headers=self.headers, params=params, json=json)
-                
-                if response.status_code == 429:
-                    if self.rate_limiter.retry_count >= self.rate_limiter.max_retries:
-                        st.error("Maximum retry attempts reached. Please try again later.")
+                resp = requests.request(method, url, headers=self.headers, params=params, timeout=30)
+                if resp.status_code == 429:
+                    retries += 1
+                    if retries > MAX_RETRIES:
+                        st.error("Hit rate limit too many times. Try narrower filters or wait a bit.")
                         return None
-                    continue  # Try again after waiting
-                
-                response.raise_for_status()
-                return response
-                
+                    retry_after = resp.headers.get("Retry-After")
+                    backoff = float(retry_after) if retry_after else min(60, 2 ** retries)
+                    st.warning(f"Rate limited. Backing off {backoff:.1f}s…")
+                    time_module.sleep(backoff)
+                    continue
+                resp.raise_for_status()
+                # gentle pacing between successful requests to avoid bursts
+                time_module.sleep(GENTLE_PACING_SEC)
+                return resp
             except requests.exceptions.RequestException as e:
-                st.error(f"API request error: {str(e)}")
-                return None
-
-    def get_broadcasts(self, cursor: Optional[str] = None, per_page: int = DEFAULT_PER_PAGE) -> Dict:
-        """Get broadcasts with cursor-based pagination"""
-        @st.cache_data(show_spinner=False, ttl=300)  # Cache for 5 minutes
-        def _cached_get_broadcasts(api_secret: str, cursor: Optional[str], per_page: int) -> Dict:
-            headers = {
-                'Accept': 'application/json',
-                'X-Kit-Api-Key': api_secret
-            }
-            params = {'per_page': per_page}
-            if cursor:
-                params['after'] = cursor
-
-            url = f"{API_BASE_URL}/broadcasts"
-            
-            # Use the rate limiter directly in cached function
-            while True:
-                self.rate_limiter.wait_if_needed()
-                
-                try:
-                    response = requests.get(url, headers=headers, params=params)
-                    if response.status_code == 429:
-                        continue
-                    response.raise_for_status()
-                    return response.json() if response.ok else None
-                except requests.exceptions.RequestException:
+                retries += 1
+                if retries > MAX_RETRIES:
+                    st.error(f"API error: {e}")
                     return None
+                backoff = min(30, 1.5 ** retries)
+                st.warning(f"Network/API error. Retrying in {backoff:.1f}s…")
+                time_module.sleep(backoff)
 
-        return _cached_get_broadcasts(self.api_secret, cursor, per_page)
+    def list_broadcasts(self, after: Optional[str] = None, per_page: int = DEFAULT_PER_PAGE) -> Dict:
+        params = {"per_page": per_page}
+        if after:
+            params["after"] = after
+        resp = self._request("GET", "broadcasts", params=params)
+        return resp.json() if resp is not None else {}
 
-    def get_broadcast_details(self, broadcast_id: int) -> Dict:
-        """Get detailed information for a specific broadcast"""
-        @st.cache_data(show_spinner=False, ttl=300)  # Cache for 5 minutes
-        def _cached_get_broadcast_details(api_secret: str, broadcast_id: int) -> Dict:
-            headers = {
-                'Accept': 'application/json',
-                'X-Kit-Api-Key': api_secret
-            }
-            url = f"{API_BASE_URL}/broadcasts/{broadcast_id}"
-            
-            while True:
-                self.rate_limiter.wait_if_needed()
-                
-                try:
-                    response = requests.get(url, headers=headers)
-                    if response.status_code == 429:
+    def get_broadcast(self, bid: int) -> Dict:
+        resp = self._request("GET", f"broadcasts/{bid}")
+        if not resp:
+            return {}
+        data = resp.json() or {}
+        return data.get("broadcast", data)
+
+    def get_broadcast_stats(self, bid: int) -> Dict:
+        resp = self._request("GET", f"broadcasts/{bid}/stats")
+        if not resp:
+            return {}
+        data = resp.json() or {}
+        return data.get("broadcast", {}).get("stats", data.get("stats", {}))
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Core download logic
+# ──────────────────────────────────────────────────────────────────────────────
+def download_broadcasts(api: KitAPI, start_iso: str, end_iso: str, published_filter: str, public_filter: str) -> pd.DataFrame:
+    """
+    Pages through broadcasts, pre-filters with lightweight list fields when possible,
+    only enriches items that survive, and returns a tidy DataFrame.
+    """
+    start_dt = _parse_iso_z(start_iso)
+    end_dt = _parse_iso_z(end_iso)
+
+    rows: List[Dict] = []
+    after = None
+    scanned = kept = 0
+
+    status = st.empty()
+    prog = st.progress(0.0, text="Starting…")
+
+    while True:
+        page = api.list_broadcasts(after=after, per_page=DEFAULT_PER_PAGE)
+        items = page.get("broadcasts", []) or []
+        if not items:
+            break
+
+        for b in items:
+            scanned += 1
+
+            # Use list-level fields to pre-filter when available
+            created_raw = b.get("created_at") or b.get("send_at")
+            if start_dt and end_dt and not in_range(created_raw, start_dt, end_dt):
+                # If list doesn't have created_at, we'll enrich to check properly
+                if not created_raw:
+                    details = api.get_broadcast(b["id"])
+                    created_raw = details.get("created_at") or details.get("send_at")
+                    if not in_range(created_raw, start_dt, end_dt):
+                        prog.progress(min(0.99, kept / max(1, scanned)), text=f"Scanned {scanned}, kept {kept}…")
                         continue
-                    response.raise_for_status()
-                    return response.json().get('broadcast') if response.ok else None
-                except requests.exceptions.RequestException:
-                    return None
-
-        return _cached_get_broadcast_details(self.api_secret, broadcast_id)
-
-    def get_broadcast_stats(self, broadcast_id: int) -> Dict:
-        """Get statistics for a specific broadcast"""
-        @st.cache_data(show_spinner=False, ttl=300)  # Cache for 5 minutes
-        def _cached_get_broadcast_stats(api_secret: str, broadcast_id: int) -> Dict:
-            headers = {
-                'Accept': 'application/json',
-                'X-Kit-Api-Key': api_secret
-            }
-            url = f"{API_BASE_URL}/broadcasts/{broadcast_id}/stats"
-            
-            while True:
-                self.rate_limiter.wait_if_needed()
-                
-                try:
-                    response = requests.get(url, headers=headers)
-                    if response.status_code == 429:
-                        continue
-                    response.raise_for_status()
-                    return response.json().get('broadcast', {}).get('stats', {}) if response.ok else None
-                except requests.exceptions.RequestException:
-                    return None
-
-        return _cached_get_broadcast_stats(self.api_secret, broadcast_id)
-
-def download_broadcasts(api_client: KitAPI, date_range: List[str], published_filter: str, public_filter: str) -> pd.DataFrame:
-    """Download broadcasts with filtering and pagination"""
-    all_broadcasts = []
-    cursor = None
-    start_datetime = datetime.fromisoformat(date_range[0].replace('Z', '+00:00'))
-    end_datetime = datetime.fromisoformat(date_range[1].replace('Z', '+00:00'))
-
-    progress_container = st.empty()
-    progress_bar = progress_container.progress(0)
-    processed_count = 0
-    total_processed = 0
-    batch_size = DEFAULT_PER_PAGE
-
-    try:
-        # First, get total count for better progress tracking
-        initial_response = api_client.get_broadcasts(per_page=1)
-        if initial_response and 'pagination' in initial_response:
-            # Estimate total based on what we can see
-            total_processed = len(initial_response.get('broadcasts', []))
-
-        while True:
-            response_data = api_client.get_broadcasts(cursor=cursor)
-            if not response_data:
-                break
-
-            broadcasts = response_data.get('broadcasts', [])
-            if not broadcasts:
-                break
-
-            for broadcast in broadcasts:
-                details = api_client.get_broadcast_details(broadcast["id"])
-                if not details or "created_at" not in details:
+                else:
+                    prog.progress(min(0.99, kept / max(1, scanned)), text=f"Scanned {scanned}, kept {kept}…")
                     continue
 
-                created_at = datetime.fromisoformat(details["created_at"].replace('Z', '+00:00'))
-                
-                if start_datetime <= created_at <= end_datetime:
-                    if _matches_filters(details, published_filter, public_filter):
-                        stats = api_client.get_broadcast_stats(broadcast["id"])
-                        details.update(stats or {})
-                        broadcast.update(details)
-                        all_broadcasts.append(broadcast)
+            # quick filter check with whatever we have
+            pre = {
+                "send_at": b.get("send_at"),
+                "public": b.get("public", False),
+            }
+            if not matches_filters(pre, published_filter, public_filter):
+                # may need details if fields are missing/None
+                details = api.get_broadcast(b["id"])
+                pre["send_at"] = pre["send_at"] or details.get("send_at")
+                pre["public"] = pre["public"] if pre["public"] is not None else details.get("public", False)
+                if not matches_filters(pre, published_filter, public_filter):
+                    prog.progress(min(0.99, kept / max(1, scanned)), text=f"Scanned {scanned}, kept {kept}…")
+                    continue
 
-                processed_count += 1
-                progress = min(processed_count / max(total_processed, batch_size), 1.0)
-                progress_bar.progress(progress, f"Downloaded {len(all_broadcasts)} broadcasts...")
+            # Enrich only now (details + stats)
+            details = api.get_broadcast(b["id"])
+            stats = api.get_broadcast_stats(b["id"])
+            combined = {**b, **(details or {}), **(stats or {})}
+            rows.append(combined)
+            kept += 1
 
-            pagination = response_data.get('pagination', {})
-            if not pagination.get('has_next_page'):
-                break
-            cursor = pagination.get('end_cursor')
+            if scanned % 20 == 0:
+                prog.progress(min(0.99, kept / max(1, scanned)), text=f"Scanned {scanned}, kept {kept}…")
 
-        progress_container.empty()  # Clean up progress bar
-        st.success(f"Successfully downloaded {len(all_broadcasts)} broadcasts")
-        
-        return pd.DataFrame(all_broadcasts) if all_broadcasts else pd.DataFrame()
-        
-    except Exception as e:
-        progress_container.empty()  # Clean up progress bar
-        st.error(f"Error downloading broadcasts: {str(e)}")
-        return pd.DataFrame()
+        pag = page.get("pagination", {}) or {}
+        if not pag.get("has_next_page"):
+            break
+        after = pag.get("end_cursor")
 
+    prog.progress(1.0, text=f"Done. Scanned {scanned}, kept {kept}.")
+    status.empty()
+    return pd.DataFrame(rows)
 
-def _matches_filters(broadcast: Dict, published_filter: str, public_filter: str) -> bool:
-    """
-    Check if broadcast matches the selected filters
-    """
-    if published_filter != "All":
-        is_published = broadcast.get("send_at") is not None
-        if (published_filter == "Published") != is_published:
-            return False
-
-    if public_filter != "All":
-        is_public = broadcast.get("public", False)
-        if (public_filter == "Public") != is_public:
-            return False
-
-    return True
-
-def save_to_markdown(df: pd.DataFrame, output_dir: str) -> str:
-    """
-    Save broadcasts to individual markdown files and create a ZIP
-    """
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    for _, row in df.iterrows():
-        filename = f"{row.iloc[0]}.md"
-        file_path = os.path.join(output_dir, filename)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            row = row.str.strip()
-            f.write(row.to_markdown())
-
-    # Create ZIP archive
-    shutil.make_archive(output_dir, 'zip', output_dir)
-    return f"{output_dir}.zip"
-
+# ──────────────────────────────────────────────────────────────────────────────
+# UI
+# ──────────────────────────────────────────────────────────────────────────────
 def main():
     st.title("Kit Email Archive Tool")
     st.markdown(
-    "<small>by [Omari Harebin](https://omariharebin.com/tools)</small>", 
-    unsafe_allow_html=True
-)
-    
-    st.markdown("""
-    Welcome! This tool helps you download and save your Kit (formerly ConvertKit) email broadcasts. 
-    Whether you want to create a backup, analyze your content, or just keep a record of your emails, 
-    I'll guide you through the process step by step.
-    """)
-    
-    with st.expander("🔑 Where to Find Your API Key", expanded=True):
-        st.markdown("""
-        To get started, you'll need your Kit API key. Here's how to find it:
-        
-        1. Log into your Kit account
-        2. Go to Settings (click your avatar in the top right)
-        3. Look for "API & Webhooks"
-        4. Your API key will be listed there. If you don't see one, you can create a new one
-        
-        Your API key is like a secure password for accessing your data - keep it safe and don't share it publicly.
-        """)
-    # Initialize session state
+        "<small>by <a href='https://omariharebin.com/tools' target='_blank'>Omari Harebin</a></small>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "Download your Kit (formerly ConvertKit) broadcasts as **CSV** or **Markdown files** (one .md per email)."
+    )
+
+    # Session state for persistence across reruns
     if "df" not in st.session_state:
-        st.session_state.df = None
+        st.session_state.df = pd.DataFrame()
+    if "zip_bytes" not in st.session_state:
+        st.session_state.zip_bytes = b""
 
-    api_secret = st.text_input("API Secret", type="password", 
-                              help="Find this in your Kit Account Settings")
-
-    if api_secret:
-        api_client = KitAPI(api_secret)
-
-        # Create layout columns
-        col1, col2, col3 = st.columns(3)
-
-        # Date range selector
-        date_range = col1.date_input(
-            "Date range",
-            [datetime(2000, 1, 1).date(), datetime.now().date()]
+    with st.expander("🔑 Where to Find Your API Key", expanded=False):
+        st.markdown(
+            """
+1. Log in to Kit  
+2. Go to **Settings → API & Webhooks**  
+3. Copy your **API Key** (keep it private)
+"""
         )
 
-        # Convert dates to ISO format with timezone
-        start_datetime = datetime.combine(date_range[0], time.min).isoformat() + "Z"
-        end_datetime = datetime.combine(date_range[1], time.min).isoformat() + "Z"
-        date_range = [start_datetime, end_datetime]
+    api_secret = st.text_input("API Secret", type="password", help="Find this in your Kit Account Settings")
 
-        # Filters
-        published_filter = col2.selectbox("Published status", ["All", "Published", "Draft"])
-        public_filter = col3.selectbox("Public status", ["All", "Public", "Private"])
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        # Default: very wide range
+        date_range = st.date_input(
+            "Date range",
+            [datetime(2000, 1, 1).date(), datetime.now().date()],
+        )
+    with col2:
+        published_filter = st.selectbox("Published status", ["All", "Published", "Draft"])
+    with col3:
+        public_filter = st.selectbox("Public status", ["All", "Public", "Private"])
 
-        if st.button("Download Broadcasts"):
-            try:
-                df = download_broadcasts(api_client, date_range, published_filter, public_filter)
-                st.session_state.df = df
-                
-                if not df.empty:
-                    st.download_button(
-                        label="Save to CSV",
-                        data=df.to_csv(index=False),
-                        file_name="kit_broadcasts.csv",
-                        mime="text/csv",
-                    )
-                else:
-                    st.warning("No broadcasts found matching your criteria.")
-            except Exception as e:
-                st.error(f"Error downloading broadcasts: {str(e)}")
+    # Convert date range to inclusive ISO (end of day)
+    if len(date_range) != 2:
+        st.stop()
 
-        if st.button("Save to Markdown") and st.session_state.df is not None:
-            try:
-                output_dir = 'output_markdown'
-                zip_file = save_to_markdown(st.session_state.df, output_dir)
-                
-                with open(zip_file, "rb") as f:
-                    st.download_button(
-                        label="Download Markdown ZIP",
-                        data=f,
-                        file_name="broadcasts_markdown.zip",
-                        mime="application/zip",
-                    )
-            except Exception as e:
-                st.error(f"Error creating Markdown files: {str(e)}")
+    start_iso = datetime.combine(date_range[0], time.min).isoformat() + "Z"
+    end_iso = datetime.combine(date_range[1], time.max).isoformat() + "Z"
 
-        # Display the DataFrame
-        if st.session_state.df is not None:
-            st.dataframe(st.session_state.df, use_container_width=True)
+    left, right = st.columns([1, 1])
+
+    with left:
+        if st.button("Download Broadcasts", type="primary", use_container_width=True, disabled=not api_secret):
+            st.session_state.df = pd.DataFrame()
+            st.session_state.zip_bytes = b""
+            api = KitAPI(api_secret)
+            df = download_broadcasts(api, start_iso, end_iso, published_filter, public_filter)
+            st.session_state.df = df
+
+            if df.empty:
+                st.warning("No broadcasts found for the given filters.")
+            else:
+                st.success(f"Loaded {len(df)} broadcasts.")
+
+    if not st.session_state.df.empty:
+        csv_bytes = st.session_state.df.to_csv(index=False).encode("utf-8")
+
+        with right:
+            # Prepare ZIP only when first needed (and cache in session)
+            if st.session_state.zip_bytes == b"":
+                st.session_state.zip_bytes = save_to_markdown_zip(st.session_state.df)
+
+            st.download_button(
+                "Download CSV",
+                data=csv_bytes,
+                file_name="kit_broadcasts.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="csv_dl",
+            )
+            st.download_button(
+                "Download Markdown ZIP",
+                data=st.session_state.zip_bytes,
+                file_name="kit_broadcasts_markdown.zip",
+                mime="application/zip",
+                use_container_width=True,
+                key="zip_dl",
+            )
+
+        st.divider()
+        st.dataframe(st.session_state.df, use_container_width=True, height=480)
+    else:
+        with right:
+            st.button("Download CSV", disabled=True, use_container_width=True)
+            st.button("Download Markdown ZIP", disabled=True, use_container_width=True)
 
 if __name__ == "__main__":
     main()
-    
